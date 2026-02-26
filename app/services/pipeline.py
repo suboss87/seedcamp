@@ -10,14 +10,16 @@ from typing import Optional
 
 from app.config import settings
 from app.models.schemas import SKUTier
-from app.services import (
-    cost_tracker,
-    model_router,
-    script_writer,
-    video_gen,
-    safety_evaluator,
-)
+from app.services import cost_tracker, model_router
 from app import monitoring
+
+# In dry-run mode, use simulated stubs instead of real API calls
+if settings.dry_run:
+    from app.services import dry_run as script_writer
+    from app.services import dry_run as video_gen
+    from app.services import dry_run as safety_evaluator
+else:
+    from app.services import script_writer, video_gen, safety_evaluator
 
 logger = logging.getLogger(__name__)
 
