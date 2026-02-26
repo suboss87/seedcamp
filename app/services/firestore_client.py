@@ -8,8 +8,14 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from google.cloud.firestore import AsyncClient
-from google.cloud import firestore
+try:
+    from google.cloud.firestore import AsyncClient
+    from google.cloud import firestore
+except ImportError:
+    raise ImportError(
+        "Firestore backend requires google-cloud-firestore. "
+        "Install with: pip install -r requirements-gcp.txt"
+    )
 
 from app.models.campaign_schemas import (
     Campaign,

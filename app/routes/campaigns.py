@@ -17,7 +17,7 @@ from app.models.campaign_schemas import (
     Product,
     VideoResult,
 )
-from app.services import firestore_client as db
+from app.services.persistence import db
 
 logger = logging.getLogger(__name__)
 

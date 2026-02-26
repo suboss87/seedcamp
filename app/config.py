@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     safety_temperature: float = 0.0  # Deterministic evaluation
     safety_max_tokens: int = 512
 
+    # --- Dry-run mode ---
+    dry_run: bool = False  # Simulate API calls without real ModelArk requests
+
     # --- Security ---
     cors_origins: str = (
         "*"  # Comma-separated origins, e.g. "https://example.com,https://app.example.com"
@@ -51,6 +54,7 @@ class Settings(BaseSettings):
     # --- Storage ---
     output_dir: Path = Path("output")
     gcs_bucket: str = "your-gcs-bucket-name"
+    persistence_backend: str = "memory"  # "memory" (default) or "firestore"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
