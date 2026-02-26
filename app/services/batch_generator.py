@@ -15,9 +15,17 @@ from app.models.campaign_schemas import (
     ProductStatus,
     VideoResult,
 )
+from app.config import settings
 from app.models.schemas import SKUTier
-from app.services import brief_generator, firestore_client as db, video_gen
+from app.services.persistence import db
 from app.services.pipeline import run_pipeline
+
+# In dry-run mode, use simulated stubs
+if settings.dry_run:
+    from app.services import dry_run as brief_generator
+    from app.services import dry_run as video_gen
+else:
+    from app.services import brief_generator, video_gen
 
 logger = logging.getLogger(__name__)
 

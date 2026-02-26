@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,8 +27,14 @@ from app.models.schemas import (
     SKUTier,
     VideoTaskStatus,
 )
-from app.services import cost_tracker, video_gen
-from app.services import firestore_client
+from app.services import cost_tracker
+from app.services.persistence import db as firestore_client
+
+# In dry-run mode, use simulated video_gen stubs
+if settings.dry_run:
+    from app.services import dry_run as video_gen
+else:
+    from app.services import video_gen
 from app.services.pipeline import run_pipeline, ContentBlockedError
 from app import monitoring
 from app.routes.campaigns import router as campaigns_router
@@ -38,8 +45,60 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# ─── Lifespan (startup / shutdown) ────────────────────────────────────────────────
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Validate configuration and initialize services on startup."""
+    logger.info("Starting AdCamp Video Generation Pipeline...")
+
+    if settings.dry_run:
+        logger.info("DRY_RUN mode enabled — API calls will be simulated")
+
+    # Initialize persistence backend
+    try:
+        firestore_client.init()
+    except Exception as e:
+        logger.warning("Persistence init failed (continuing with defaults): %s", e)
+
+    # Validate API key (skip in dry-run mode)
+    if settings.dry_run:
+        logger.info("Skipping API key validation (dry-run mode)")
+    elif not settings.ark_api_key:
+        logger.error("ARK_API_KEY environment variable is not set!")
+        raise InvalidAPIKeyError("ARK_API_KEY is required but not configured")
+    else:
+        logger.info("Validating ModelArk API key...")
+        try:
+            await validate_api_key(settings.ark_api_key, settings.ark_base_url)
+            logger.info("ModelArk API key validated successfully")
+        except InvalidAPIKeyError as e:
+            logger.error("Invalid ModelArk API key: %s", e)
+            logger.error("Please check your ARK_API_KEY environment variable")
+            raise
+        except Exception as e:
+            logger.warning(
+                "Could not validate API key at startup (network issue or endpoint unreachable). "
+                "The API key may still be valid — pipeline calls will fail if it is not. Error: %s",
+                e,
+            )
+
+    logger.debug("Configured models:")
+    logger.debug("  Script: %s", settings.script_model)
+    logger.debug("  Video Pro: %s ($1.20/M)", settings.video_model_pro)
+    logger.debug("  Video Fast: %s ($0.70/M)", settings.video_model_fast)
+    logger.info("Pipeline ready")
+
+    yield  # App runs here
+
+    logger.info("Shutting down AdCamp...")
+
+
 app = FastAPI(
     title="AdCamp: AI Content Generation Pipeline",
+    lifespan=lifespan,
     description="""
     Reference architecture for cost-optimized AI video generation at scale,
     powered by BytePlus ModelArk.
@@ -115,8 +174,7 @@ app.mount("/output", StaticFiles(directory=str(settings.output_dir)), name="outp
 # Register campaign routes
 app.include_router(campaigns_router)
 
-# Lazy import for GCS (used by /api/upload-image)
-from google.cloud import storage  # noqa: E402
+# GCS is lazy-imported inside upload_image() to avoid hard dependency
 
 # ─── Shared Pipeline Helpers ─────────────────────────────────────────────────────
 
@@ -141,46 +199,6 @@ def _track_success_metrics(cost_usd: float, sku_tier: SKUTier):
     monitoring.increment_counter("videos_generated_total")
 
 
-# ─── Startup Events ───────────────────────────────────────────────────────────────
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Validate configuration and initialize services on startup."""
-    logger.info("Starting AdCamp Video Generation Pipeline...")
-
-    # Initialize Firestore
-    try:
-        firestore_client.init()
-        logger.info("Firestore initialized")
-    except Exception as e:
-        logger.warning("Firestore init failed (continuing without persistence): %s", e)
-
-    # Validate API key
-    if not settings.ark_api_key:
-        logger.error("ARK_API_KEY environment variable is not set!")
-        raise InvalidAPIKeyError("ARK_API_KEY is required but not configured")
-
-    logger.info("Validating ModelArk API key...")
-    try:
-        await validate_api_key(settings.ark_api_key, settings.ark_base_url)
-        logger.info("ModelArk API key validated successfully")
-    except InvalidAPIKeyError as e:
-        logger.error("Invalid ModelArk API key: %s", e)
-        logger.error("Please check your ARK_API_KEY environment variable")
-        raise
-    except Exception as e:
-        logger.warning(
-            "Could not validate API key at startup (network issue or endpoint unreachable). "
-            "The API key may still be valid — pipeline calls will fail if it is not. Error: %s",
-            e,
-        )
-
-    logger.debug("Configured models:")
-    logger.debug("  Script: %s", settings.script_model)
-    logger.debug("  Video Pro: %s ($1.20/M)", settings.video_model_pro)
-    logger.debug("  Video Fast: %s ($0.70/M)", settings.video_model_fast)
-    logger.info("Pipeline ready")
 
 
 # ─── Health ───────────────────────────────────────────────────────────────────────
@@ -258,6 +276,13 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
             )
 
         # Upload to GCS — use UUID to prevent directory traversal
+        try:
+            from google.cloud import storage
+        except ImportError:
+            raise HTTPException(
+                status_code=501,
+                detail="Image upload requires google-cloud-storage. Install with: pip install google-cloud-storage",
+            )
         client = storage.Client()
         bucket = client.bucket(settings.gcs_bucket)
         safe_name = (
