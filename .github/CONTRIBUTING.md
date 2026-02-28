@@ -135,34 +135,53 @@ Prefixes:
 
 ## Areas for Contribution
 
-### 🐛 Bug Fixes
+### Bug Fixes
 - Check [Issues](https://github.com/suboss87/adcamp/issues) for bugs
 - Reproduce the bug
 - Write a test that fails
 - Fix the bug
 - Verify test passes
 
-### ✨ Features
+### Features
 - Discuss major features in Issues first
 - Start with small, focused PRs
 - Break large features into multiple PRs
 
-### 📚 Documentation
+### Documentation
 - Fix typos and clarify instructions
 - Add deployment guides for new platforms
 - Create tutorials and examples
 - Improve API documentation
 
-### 🧪 Testing
+### Testing
 - Add missing tests
 - Improve test coverage
 - Add integration tests
 - Add performance benchmarks
 
-### 🎨 UI/UX
+### UI/UX
 - Improve Streamlit dashboard
 - Add visualizations
 - Enhance user experience
+
+## Good First Issues
+
+New to AdCamp? These are self-contained tasks that don't require deep knowledge of the codebase:
+
+| Task | Difficulty | Files | Description |
+|------|-----------|-------|-------------|
+| **Add a new industry example** | Easy | `docs/examples/` | Write a script like `automotive_dealer.py` for another vertical (education, hospitality, travel). Follow the existing pattern. |
+| **Add Azure deployment guide** | Easy | `deploy/azure/` | Create Terraform + docs for Azure Container Apps, following the GCP/AWS pattern. |
+| **Add DigitalOcean deployment guide** | Easy | `deploy/digitalocean/` | Create deployment config for DigitalOcean App Platform. |
+| **Multi-language brief support** | Medium | `app/services/script_writer.py` | Add a `language` parameter to script generation for non-English markets (SE Asia, LATAM). |
+| **Interactive cost calculator** | Medium | `dashboard/` | Add a Streamlit page where users input SKU count, hero %, and refresh frequency to see projected annual costs. |
+| **Dashboard chart improvements** | Easy | `dashboard/app.py` | Add cost-per-tier breakdown chart and hero vs catalog comparison visualizations. |
+| **Batch timing benchmarks** | Medium | `docs/` | Run benchmarks at different batch sizes and concurrency levels, publish results. |
+| **Webhook delivery retry** | Medium | `app/services/notifications.py` | Add retry logic for failed webhook deliveries (currently fire-and-forget). |
+| **CSV validation error messages** | Easy | `app/services/csv_parser.py` | Improve error messages when CSV upload fails validation (row numbers, specific field errors). |
+| **API rate limit headers** | Easy | `app/main.py` | Add `X-RateLimit-Remaining` and `X-RateLimit-Reset` response headers. |
+
+Look for issues tagged [`good first issue`](https://github.com/suboss87/adcamp/labels/good%20first%20issue) on GitHub.
 
 ## Project Structure
 
