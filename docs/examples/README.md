@@ -1,6 +1,6 @@
 # Examples
 
-Runnable scripts demonstrating AdCamp API usage.
+Runnable scripts demonstrating AdCamp API usage across industries.
 
 ## Prerequisites
 
@@ -9,11 +9,11 @@ Runnable scripts demonstrating AdCamp API usage.
 make install
 source venv/bin/activate
 
-# Start the API
-make dev
+# Start the API (DRY_RUN=true works without API keys)
+DRY_RUN=true make dev
 ```
 
-## Scripts
+## Core Scripts
 
 ### `generate_single_video.py`
 
@@ -33,6 +33,34 @@ Full campaign workflow: create a campaign, upload a product CSV, trigger batch g
 python3 docs/examples/batch_campaign.py
 ```
 
+## Industry Examples
+
+These scripts demonstrate how AdCamp's tiered routing adapts to different verticals. Each one submits a batch of items with realistic briefs and prints a cost summary showing the hero/standard split.
+
+### `automotive_dealer.py`
+
+Dealership scenario with 300+ vehicles. Featured/certified vehicles route to the premium model; bulk used inventory routes to the fast model.
+
+```bash
+python3 docs/examples/automotive_dealer.py
+```
+
+### `ecommerce_catalog.py`
+
+E-commerce scenario with 1K-100K SKUs. Top-revenue hero products get premium video; long-tail catalog items get cost-optimized video.
+
+```bash
+python3 docs/examples/ecommerce_catalog.py
+```
+
+### `real_estate_listing.py`
+
+Real estate scenario with 500+ listings. Luxury properties ($1M+) get cinematic walkthroughs; standard listings get quick virtual tours.
+
+```bash
+python3 docs/examples/real_estate_listing.py
+```
+
 ## Environment
 
-Both scripts default to `http://localhost:8000`. Set `ARK_API_KEY` in your `.env` file before running.
+All scripts default to `http://localhost:8000`. Set `DRY_RUN=true` to run without a BytePlus API key, or set `ARK_API_KEY` in your `.env` file for real generation.
